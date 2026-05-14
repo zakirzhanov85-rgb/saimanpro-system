@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SaimanPro — Дашборд</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+  #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%); }
+  .login-box { background:#1e293b; border-radius:20px; padding:48px 40px; width:380px; box-shadow:0 25px 50px rgba(0,0,0,0.5); border:1px solid #334155; }
+  .login-logo { text-align:center; margin-bottom:32px; }
+  .login-logo h1 { font-size:28px; font-weight:800; color:#38bdf8; }
+  .login-logo p { color:#64748b; font-size:14px; margin-top:4px; }
+  .login-box input { width:100%; padding:14px 16px; background:#0f172a; border:1px solid #334155; border-radius:10px; color:#e2e8f0; font-size:16px; margin-bottom:16px; outline:none; transition:border-color .2s; }
+  .login-box input:focus { border-color:#38bdf8; }
+  .login-btn { width:100%; padding:14px; background:linear-gradient(135deg,#0ea5e9,#6366f1); border:none; border-radius:10px; color:#fff; font-size:16px; font-weight:700; cursor:pointer; }
+  .login-error { color:#f87171; font-size:13px; text-align:center; margin-top:12px; display:none; }
+  #dashboard { display:none; }
+  .topbar { background:#1e293b; border-bottom:1px solid #334155; padding:0 24px; height:60px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+  .topbar-logo { font-size:20px; font-weight:800; color:#38bdf8; }
+  .topbar-right { display:flex; align-items:center; gap:16px; }
+  .sync-badge { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:6px 12px; font-size:12px; color:#94a3b8; }
+  .sync-badge span { color:#22c55e; }
+  .logout-btn { background:#334155; border:none; border-radius:8px; padding:6px 14px; color:#94a3b8; cursor:pointer; font-size:13px; }
+  .main { padding:24px; max-width:1400px; margin:0 auto; }
+  .tabs { display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap; }
+  .tab { padding:8px 20px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#94a3b8; cursor:pointer; font-size:14px; font-weight:500; transition:all .2s; }
+  .tab.active { background:#0ea5e9; border-color:#0ea5e9; color:#fff; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-bottom:24px; }
+  .kpi-card { background:#1e293b; border-radius:16px; padding:20px; border:1px solid #334155; }
+  .kpi-label { font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+  .kpi-value { font-size:28px; font-weight:800; line-height:1; }
+  .kpi-sub { font-size:12px; color:#64748b; margin-top:6px; }
+  .kpi-green { color:#22c55e; } .kpi-red { color:#f87171; } .kpi-yellow { color:#fbbf24; } .kpi-blue { color:#38bdf8; }
+  .panel-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+  @media(max-width:900px){ .panel-grid{ grid-template-columns:1fr; } }
+  .panel { background:#1e293b; border-radius:16px; padding:20px; border:1px solid #334155; }
+  .panel-title { font-size:14px; font-weight:700; color:#e2e8f0; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+  .panel-full { grid-column:1/-1; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { padding:8px 12px; text-align:left; color:#64748b; font-weight:600; border-bottom:1px solid #334155; font-size:11px; text-transform:uppercase; }
+  td { padding:10px 12px; border-bottom:1px solid #1e293b; }
+  tr:hover td { background:#0f172a; }
+  .badge { padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+  .badge-red { background:#7f1d1d; color:#fca5a5; } .badge-yellow { background:#78350f; color:#fcd34d; } .badge-green { background:#14532d; color:#86efac; }
+  .chart-wrap { position:relative; height:220px; }
+  .manager-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+  .manager-card { background:#1e293b; border-radius:16px; padding:20px; border:1px solid #334155; }
+  .manager-name { font-size:16px; font-weight:700; margin-bottom:12px; }
+  .manager-stat { display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid #0f172a; }
+  .progress-bar { height:6px; background:#0f172a; border-radius:3px; margin-top:8px; overflow:hidden; }
+  .progress-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#0ea5e9,#6366f1); }
+  .loading { text-align:center; padding:40px; color:#64748b; }
+  .spinner { display:inline-block; width:24px; height:24px; border:3px solid #334155; border-top-color:#38bdf8; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to{ transform:rotate(360deg); } }
+  .section { display:none; } .section.active { display:block; }
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo"><h1>📦 SaimanPro</h1><p>Управленческий дашборд</p></div>
+    <input type="text" id="login-user" placeholder="Логин" />
+    <input type="password" id="login-pass" placeholder="Пароль" />
+    <button class="login-btn" onclick="doLogin()">Войти</button>
+    <div class="login-error" id="login-error">Неверный логин или пароль</div>
+  </div>
+</div>
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-logo">📦 SaimanPro</div>
+    <div class="topbar-right">
+      <div class="sync-badge">Данные: <span id="sync-time">загрузка...</span></div>
+      <button class="logout-btn" onclick="doLogout()">Выйти</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('overview',this)">📊 Обзор</div>
+      <div class="tab" onclick="showTab('sales',this)">💰 Продажи</div>
+      <div class="tab" onclick="showTab('managers',this)">👥 Менеджеры</div>
+      <div class="tab" onclick="showTab('debtors',this)">⚠️ Дебиторка</div>
+      <div class="tab" onclick="showTab('stock',this)">📦 Склад</div>
+    </div>
+    <div class="section active" id="tab-overview">
+      <div class="kpi-grid" id="kpi-cards"><div class="loading"><div class="spinner"></div></div></div>
+      <div class="panel-grid">
+        <div class="panel"><div class="panel-title">📈 Выручка по месяцам</div><div class="chart-wrap"><canvas id="chart-revenue"></canvas></div></div>
+        <div class="panel"><div class="panel-title">🏷️ Топ-10 товаров</div><div id="top-goods"><div class="loading"><div class="spinner"></div></div></div></div>
+      </div>
+    </div>
+    <div class="section" id="tab-sales">
+      <div class="panel panel-full">
+        <div class="panel-title">💰 Продажи
+          <select id="sales-filter" onchange="loadSales()" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:12px;">
+            <option value="30">За 30 дней</option><option value="90">За 90 дней</option><option value="365" selected>За год</option>
+          </select>
+        </div>
+        <div id="sales-table"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+    <div class="section" id="tab-managers"><div class="manager-grid" id="managers-cards"><div class="loading"><div class="spinner"></div></div></div></div>
+    <div class="section" id="tab-debtors"><div class="panel panel-full"><div class="panel-title">⚠️ Дебиторка</div><div id="debtors-table"><div class="loading"><div class="spinner"></div></div></div></div></div>
+    <div class="section" id="tab-stock"><div class="panel panel-full"><div class="panel-title">📦 Остатки склада</div><div id="stock-table"><div class="loading"><div class="spinner"></div></div></div></div></div>
+  </div>
+</div>
+<script>
+const SUPABASE_URL = 'https://cqarqqrldrbpqzngouiy.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxYXJxcXJsZHJicHF6bmdvdWl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg5MTUsImV4cCI6MjA5NDMzNDkxNX0.RnJ25wMfDGScWjhFqtkKf1v2wIkMKFsd5t1MovoB3NI';
+const USERS = {'serikbol':'Saimanpro2026!','admin':'Admin2026!'};
+function doLogin(){
+  const u=document.getElementById('login-user').value.trim().toLowerCase();
+  const p=document.getElementById('login-pass').value;
+  if(USERS[u]&&USERS[u]===p){sessionStorage.setItem('sp_auth',u);document.getElementById('login-screen').style.display='none';document.getElementById('dashboard').style.display='block';initDashboard();}
+  else{document.getElementById('login-error').style.display='block';}
+}
+function doLogout(){sessionStorage.removeItem('sp_auth');location.reload();}
+document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+if(sessionStorage.getItem('sp_auth')){document.getElementById('login-screen').style.display='none';document.getElementById('dashboard').style.display='block';initDashboard();}
+async function query(table,params=''){const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`,{headers:{'apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`}});return r.json();}
+function showTab(name,el){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById(`tab-${name}`).classList.add('active');el.classList.add('active');if(name==='sales')loadSales();if(name==='managers')loadManagers();if(name==='debtors')loadDebtors();if(name==='stock')loadStock();}
+function fmt(n){return new Intl.NumberFormat('ru-RU').format(Math.round(n));}
+async function initDashboard(){document.getElementById('sync-time').textContent=new Date().toLocaleDateString('ru-RU');await loadKPIs();await loadTopGoods();await loadRevenueChart();}
+async function loadKPIs(){
+  const data=await query('sales','select=revenue,cost_price,gross_profit,customer_name');
+  if(!data||data.error)return;
+  const totalRev=data.reduce((s,r)=>s+(+r.revenue||0),0);
+  const totalCost=data.reduce((s,r)=>s+(+r.cost_price||0),0);
+  const totalProfit=totalRev-totalCost;
+  const avgMargin=totalRev>0?(totalProfit/totalRev*100).toFixed(1):0;
+  const clients=new Set(data.map(r=>r.customer_name)).size;
+  const mc=avgMargin>=20?'kpi-green':avgMargin>=10?'kpi-yellow':'kpi-red';
+  document.getElementById('kpi-cards').innerHTML=`
+    <div class="kpi-card"><div class="kpi-label">💰 Выручка (2026)</div><div class="kpi-value kpi-blue">${fmt(totalRev)} ₸</div><div class="kpi-sub">${data.length} сделок</div></div>
+    <div class="kpi-card"><div class="kpi-label">💸 Себестоимость</div><div class="kpi-value kpi-red">${fmt(totalCost)} ₸</div><div class="kpi-sub">прямые затраты</div></div>
+    <div class="kpi-card"><div class="kpi-label">📈 Валовая прибыль</div><div class="kpi-value kpi-green">${fmt(totalProfit)} ₸</div><div class="kpi-sub">выручка − себестоимость</div></div>
+    <div class="kpi-card"><div class="kpi-label">📊 Маржа</div><div class="kpi-value ${mc}">${avgMargin}%</div><div class="kpi-sub">${avgMargin<15?'⚠️ Ниже нормы':'✅ В норме'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">🏢 Клиентов</div><div class="kpi-value kpi-blue">${clients}</div><div class="kpi-sub">уникальных</div></div>
+    <div class="kpi-card"><div class="kpi-label">📦 Сделок</div><div class="kpi-value kpi-blue">${data.length}</div><div class="kpi-sub">строк продаж</div></div>`;
+}
+async function loadTopGoods(){
+  const data=await query('sales','select=goods_name,revenue&order=revenue.desc&limit=200');
+  if(!data||data.error)return;
+  const map={};
+  data.forEach(r=>{const n=r.goods_name;if(!map[n])map[n]=0;map[n]+=(+r.revenue||0);});
+  const top=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxR=top[0]?.[1]||1;
+  document.getElementById('top-goods').innerHTML=top.map(([name,v],i)=>`
+    <div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%">${i+1}. ${name}</span><span style="color:#38bdf8;white-space:nowrap;">${fmt(v)} ₸</span></div><div style="height:4px;background:#0f172a;border-radius:2px;"><div style="height:4px;background:linear-gradient(90deg,#0ea5e9,#6366f1);border-radius:2px;width:${Math.round(v/maxR*100)}%"></div></div></div>`).join('');
+}
+async function loadRevenueChart(){
+  const data=await query('sales','select=date,revenue,gross_profit');
+  if(!data||data.error)return;
+  const monthly={};
+  data.forEach(r=>{const m=r.date?.substring(0,7);if(!m)return;if(!monthly[m])monthly[m]={rev:0,profit:0};monthly[m].rev+=(+r.revenue||0);monthly[m].profit+=(+r.gross_profit||0);});
+  const labels=Object.keys(monthly).sort();
+  const revs=labels.map(m=>Math.round(monthly[m].rev/1000000*100)/100);
+  const profits=labels.map(m=>Math.round(monthly[m].profit/1000000*100)/100);
+  const mn=['','Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  new Chart(document.getElementById('chart-revenue').getContext('2d'),{type:'bar',data:{labels:labels.map(l=>mn[+l.split('-')[1]]),datasets:[{label:'Выручка (млн ₸)',data:revs,backgroundColor:'rgba(14,165,233,0.7)',borderRadius:4},{label:'Прибыль (млн ₸)',data:profits,backgroundColor:'rgba(34,197,94,0.7)',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}},scales:{x:{ticks:{color:'#64748b'},grid:{color:'#1e293b'}},y:{ticks:{color:'#64748b'},grid:{color:'#1e293b'}}}}});
+}
+async function loadSales(){
+  const days=document.getElementById('sales-filter').value;
+  const from=new Date();from.setDate(from.getDate()-days);
+  const fromStr=from.toISOString().split('T')[0];
+  const data=await query('sales',`select=date,goods_name,customer_name,quantity,revenue,cost_price,gross_profit,margin_pct&date=gte.${fromStr}&order=date.desc&limit=300`);
+  if(!data||data.error)return;
+  document.getElementById('sales-table').innerHTML=`<table><tr><th>Дата</th><th>Товар</th><th>Клиент</th><th>Кол-во</th><th>Выручка</th><th>Себест.</th><th>Прибыль</th><th>Маржа</th></tr>${data.map(r=>{const m=+r.margin_pct||0;const mc=m>=20?'badge-green':m>=10?'badge-yellow':'badge-red';const name=(r.goods_name||'').length>35?r.goods_name.substring(0,35)+'...':r.goods_name;return`<tr><td style="color:#64748b;white-space:nowrap">${r.date||''}</td><td title="${r.goods_name}">${name}</td><td style="color:#94a3b8">${(r.customer_name||'').substring(0,25)}</td><td style="text-align:right">${(+r.quantity||0).toFixed(1)}</td><td style="text-align:right;color:#38bdf8">${fmt(r.revenue)}</td><td style="text-align:right;color:#f87171">${fmt(r.cost_price)}</td><td style="text-align:right;color:#22c55e">${fmt(r.gross_profit)}</td><td style="text-align:right"><span class="badge ${mc}">${m.toFixed(1)}%</span></td></tr>`;}).join('')}</table>`;
+}
+async function loadManagers(){
+  const data=await query('sales','select=revenue,gross_profit');
+  const managers=['Амриев Тимур','Ермек Мадияр','Байтиева Лаура','Изтлеуов Санжар'];
+  const plans={'Амриев Тимур':5000000,'Ермек Мадияр':5000000,'Байтиева Лаура':4000000,'Изтлеуов Санжар':4000000};
+  const totalRev=(data||[]).reduce((s,r)=>s+(+r.revenue||0),0);
+  const totalProfit=(data||[]).reduce((s,r)=>s+(+r.gross_profit||0),0);
+  document.getElementById('managers-cards').innerHTML=managers.map(name=>{
+    const plan=plans[name];const rev=totalRev/4;const profit=totalProfit/4;
+    const pct=Math.min(Math.round(rev/plan*100),150);
+    const margin=rev>0?(profit/rev*100).toFixed(1):0;
+    const pc=pct>=100?'kpi-green':pct>=70?'kpi-yellow':'kpi-red';
+    return`<div class="manager-card"><div class="manager-name">👤 ${name}</div><div class="manager-stat"><span style="color:#64748b">Выручка</span><span style="color:#38bdf8">${fmt(rev)} ₸</span></div><div class="manager-stat"><span style="color:#64748b">Прибыль</span><span style="color:#22c55e">${fmt(profit)} ₸</span></div><div class="manager-stat"><span style="color:#64748b">Маржа</span><span class="${margin>=15?'kpi-green':margin>=8?'kpi-yellow':'kpi-red'}">${margin}%</span></div><div class="manager-stat"><span style="color:#64748b">% плана</span><span class="${pc}">${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${Math.min(pct,100)}%"></div></div><div style="font-size:11px;color:#64748b;margin-top:4px">план: ${fmt(plan)} ₸</div></div>`;
+  }).join('');
+}
+async function loadDebtors(){
+  const data=await query('debtors','select=*&order=overdue_days.desc');
+  if(!data||data.error||data.length===0){document.getElementById('debtors-table').innerHTML='<div style="text-align:center;padding:40px;color:#64748b;"><div style="font-size:40px;margin-bottom:12px">✅</div><div>Данные дебиторки загружаются...</div></div>';return;}
+  const total=data.reduce((s,r)=>s+(+r.debt_amount||0),0);
+  document.getElementById('debtors-table').innerHTML=`<div style="margin-bottom:16px;padding:12px;background:#0f172a;border-radius:8px;display:flex;justify-content:space-between;"><span style="color:#64748b">Итого:</span><span style="color:#f87171;font-weight:700">${fmt(total)} ₸</span></div><table><tr><th>Клиент</th><th>Сумма</th><th>Просрочка</th><th>Статус</th></tr>${data.map(r=>{const d=+r.overdue_days||0;const bc=d>30?'badge-red':d>14?'badge-yellow':'badge-green';return`<tr><td>${r.customer_name}</td><td style="text-align:right;color:#f87171">${fmt(r.debt_amount)} ₸</td><td style="text-align:right">${d} дн.</td><td><span class="badge ${bc}">${d>30?'Критично':d>14?'Просрочено':'Норма'}</span></td></tr>`;}).join('')}</table>`;
+}
+async function loadStock(){
+  const data=await query('stock','select=*&order=total_value.desc');
+  if(!data||data.error||data.length===0){document.getElementById('stock-table').innerHTML='<div style="text-align:center;padding:40px;color:#64748b;"><div style="font-size:40px;margin-bottom:12px">📦</div><div>Данные склада загружаются...</div></div>';return;}
+  const totalVal=data.reduce((s,r)=>s+(+r.total_value||0),0);
+  document.getElementById('stock-table').innerHTML=`<div style="margin-bottom:16px;padding:12px;background:#0f172a;border-radius:8px;display:flex;justify-content:space-between;"><span style="color:#64748b">Стоимость склада:</span><span style="color:#38bdf8;font-weight:700">${fmt(totalVal)} ₸</span></div><table><tr><th>Товар</th><th>Остаток</th><th>Себест.</th><th>Сумма</th><th>Статус</th></tr>${data.map(r=>{const low=+r.quantity<=+r.min_quantity;return`<tr><td>${r.goods_name}</td><td style="text-align:right">${(+r.quantity||0).toFixed(1)}</td><td style="text-align:right;color:#94a3b8">${fmt(r.cost_price)}</td><td style="text-align:right;color:#38bdf8">${fmt(r.total_value)}</td><td><span class="badge ${low?'badge-red':'badge-green'}">${low?'Заказать':'В наличии'}</span></td></tr>`;}).join('')}</table>`;
+}
+</script>
+</body>
+</html>
